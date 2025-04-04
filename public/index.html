@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollination Proxy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .image-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .server-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pollination Proxy</h1>
+        
+        <div class="card">
+            <h2>Server Information</h2>
+            <div class="server-info">
+                <p><strong>Server IP:</strong> <span id="server-ip">Loading...</span></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Generate Image with Pollinations API</h2>
+            <form id="image-form">
+                <div class="form-group">
+                    <label for="prompt">Prompt:</label>
+                    <input type="text" id="prompt" name="prompt" required placeholder="Enter a description of the image you want to generate">
+                </div>
+                
+                <div class="form-group">
+                    <label for="model">Model:</label>
+                    <select id="model" name="model">
+                        <option value="stable-diffusion">Stable Diffusion</option>
+                        <option value="midjourney">Midjourney</option>
+                        <option value="dalle">DALL-E</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="width">Width:</label>
+                    <input type="number" id="width" name="width" value="512" min="64" max="1024">
+                </div>
+                
+                <div class="form-group">
+                    <label for="height">Height:</label>
+                    <input type="number" id="height" name="height" value="512" min="64" max="1024">
+                </div>
+                
+                <div class="form-group">
+                    <label for="seed">Seed (optional):</label>
+                    <input type="number" id="seed" name="seed" placeholder="Random seed will be used if empty">
+                </div>
+                
+                <button type="submit">Generate Image</button>
+            </form>
+            
+            <div class="loading" id="loading">
+                <p>Generating image, please wait...</p>
+            </div>
+            
+            <div class="error" id="error"></div>
+            
+            <div class="image-container" id="image-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch server IP when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/ip');
+                const data = await response.json();
+                document.getElementById('server-ip').textContent = data.ip;
+            } catch (error) {
+                document.getElementById('server-ip').textContent = 'Error fetching IP';
+                console.error('Error fetching server IP:', error);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('image-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const prompt = document.getElementById('prompt').value;
+            const model = document.getElementById('model').value;
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            const seed = document.getElementById('seed').value;
+            
+            const imageContainer = document.getElementById('image-container');
+            const loading = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            
+            // Clear previous results
+            imageContainer.innerHTML = '';
+            errorElement.textContent = '';
+            loading.style.display = 'block';
+            
+            try {
+                // Build the URL with query parameters
+                const url = `/api/pollinations?prompt=${encodeURIComponent(prompt)}&model=${model}&width=${width}&height=${height}${seed ? `&seed=${seed}` : ''}`;
+                
+                // Create image element
+                const img = document.createElement('img');
+                img.src = url;
+                
+                // When image loads, hide loading indicator and show image
+                img.onload = () => {
+                    loading.style.display = 'none';
+                    imageContainer.appendChild(img);
+                };
+                
+                // Handle image loading error
+                img.onerror = () => {
+                    loading.style.display = 'none';
+                    errorElement.textContent = 'Error generating image. Please try again.';
+                };
+            } catch (error) {
+                loading.style.display = 'none';
+                errorElement.textContent = 'Error generating image: ' + error.message;
+                console.error('Error generating image:', error);
+            }
+        });
+    </script>
+</body>
+</html>
