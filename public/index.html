@@ -70,6 +70,18 @@
             text-align: center;
             margin: 20px 0;
         }
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #4CAF50;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         .error {
             color: red;
             margin-top: 10px;
@@ -128,6 +140,16 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="aspect-ratio">Aspect Ratio:</label>
+                    <select id="aspect-ratio" name="aspect-ratio">
+                        <option value="custom">Custom</option>
+                        <option value="1:1">1:1 Square</option>
+                        <option value="16:9">16:9 Landscape</option>
+                        <option value="9:16">9:16 Portrait</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
                     <label for="width">Width:</label>
                     <input type="number" id="width" name="width" value="512" min="64" max="1024">
                 </div>
@@ -146,6 +168,7 @@
             </form>
             
             <div class="loading" id="loading">
+                <div class="spinner"></div>
                 <p>Generating image, please wait...</p>
             </div>
             
@@ -165,6 +188,26 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="edit-aspect-ratio">Aspect Ratio:</label>
+                    <select id="edit-aspect-ratio" name="edit-aspect-ratio">
+                        <option value="custom">Custom</option>
+                        <option value="1:1">1:1 Square</option>
+                        <option value="16:9">16:9 Landscape</option>
+                        <option value="9:16">9:16 Portrait</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-width">Width:</label>
+                    <input type="number" id="edit-width" name="edit-width" value="512" min="64" max="1024">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-height">Height:</label>
+                    <input type="number" id="edit-height" name="edit-height" value="512" min="64" max="1024">
+                </div>
+                
+                <div class="form-group">
                     <label for="reference-images">Reference Images:</label>
                     <div class="reference-inputs">
                         <input type="text" id="reference-image-1" class="reference-image" 
@@ -177,6 +220,7 @@
             </form>
             
             <div class="loading" id="edit-loading">
+                <div class="spinner"></div>
                 <p>Editing image, please wait...</p>
             </div>
             
@@ -187,6 +231,39 @@
     </div>
 
     <script>
+        // Add this at the start of your script section
+        function updateDimensions(aspectRatio, isEdit = false) {
+            const width = document.getElementById(isEdit ? 'edit-width' : 'width');
+            const height = document.getElementById(isEdit ? 'edit-height' : 'height');
+            
+            switch(aspectRatio) {
+                case '1:1':
+                    width.value = '512';
+                    height.value = '512';
+                    break;
+                case '16:9':
+                    width.value = '896';
+                    height.value = '504';
+                    break;
+                case '9:16':
+                    width.value = '504';
+                    height.value = '896';
+                    break;
+                case 'custom':
+                    // Do nothing, let user input custom values
+                    break;
+            }
+        }
+
+        // Add aspect ratio change listeners
+        document.getElementById('aspect-ratio').addEventListener('change', (e) => {
+            updateDimensions(e.target.value, false);
+        });
+
+        document.getElementById('edit-aspect-ratio').addEventListener('change', (e) => {
+            updateDimensions(e.target.value, true);
+        });
+
         // Fetch server IP when page loads
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -269,6 +346,8 @@
             e.preventDefault();
             
             const prompt = document.getElementById('edit-prompt').value;
+            const width = document.getElementById('edit-width').value;
+            const height = document.getElementById('edit-height').value;
             const referenceInputs = document.querySelectorAll('.reference-image');
             
             // Collect all non-empty image URLs
@@ -286,8 +365,8 @@
             loading.style.display = 'block';
             
             try {
-                // Build the URL with query parameters
-                const url = `/api/edit-image?prompt=${encodeURIComponent(prompt)}&image=${encodeURIComponent(imageUrls.join(','))}`;
+                // Build the URL with query parameters including width and height
+                const url = `/api/edit-image?prompt=${encodeURIComponent(prompt)}&image=${imageUrls.map(url => encodeURIComponent(url)).join(',')}&width=${width}&height=${height}`;
                 
                 // Create image element
                 const img = document.createElement('img');
