@@ -74,6 +74,29 @@
             color: red;
             margin-top: 10px;
         }
+        .reference-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .reference-image {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        #add-image-btn {
+            background-color: #6c757d;
+            width: fit-content;
+            margin-top: 5px;
+        }
+        
+        #add-image-btn:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -98,9 +121,9 @@
                 <div class="form-group">
                     <label for="model">Model:</label>
                     <select id="model" name="model">
-                        <option value="stable-diffusion">Stable Diffusion</option>
-                        <option value="midjourney">Midjourney</option>
-                        <option value="dalle">DALL-E</option>
+                        <option value="flux">Flux</option>
+                        <option value="turbo">Turbo</option>
+                        <option value="gptimage">GPT Image</option>
                     </select>
                 </div>
                 
@@ -129,6 +152,37 @@
             <div class="error" id="error"></div>
             
             <div class="image-container" id="image-container"></div>
+        </div>
+
+        <!-- New Image Editing Card -->
+        <div class="card">
+            <h2>Edit Image with GPT Image</h2>
+            <form id="image-edit-form">
+                <div class="form-group">
+                    <label for="edit-prompt">Edit Prompt:</label>
+                    <input type="text" id="edit-prompt" name="edit-prompt" required 
+                           placeholder="Describe the edits you want (e.g., 'turn the sky purple', 'add sunglasses')">
+                </div>
+                
+                <div class="form-group">
+                    <label for="reference-images">Reference Images:</label>
+                    <div class="reference-inputs">
+                        <input type="text" id="reference-image-1" class="reference-image" 
+                               placeholder="Enter URL of the main image to edit" required>
+                        <button type="button" id="add-image-btn" onclick="addReferenceImageInput()">+ Add Another Reference</button>
+                    </div>
+                </div>
+                
+                <button type="submit">Edit Image</button>
+            </form>
+            
+            <div class="loading" id="edit-loading">
+                <p>Editing image, please wait...</p>
+            </div>
+            
+            <div class="error" id="edit-error"></div>
+            
+            <div class="image-container" id="edited-image-container"></div>
         </div>
     </div>
 
@@ -187,6 +241,73 @@
                 loading.style.display = 'none';
                 errorElement.textContent = 'Error generating image: ' + error.message;
                 console.error('Error generating image:', error);
+            }
+        });
+
+        // Function to add new reference image input
+        function addReferenceImageInput() {
+            const container = document.querySelector('.reference-inputs');
+            const inputCount = container.querySelectorAll('.reference-image').length;
+            
+            if (inputCount < 5) { // Limit to 5 reference images
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'reference-image';
+                input.placeholder = `Enter URL of reference image ${inputCount + 1}`;
+                
+                // Insert new input before the add button
+                container.insertBefore(input, document.getElementById('add-image-btn'));
+            }
+            
+            if (inputCount + 1 >= 5) {
+                document.getElementById('add-image-btn').style.display = 'none';
+            }
+        }
+
+        // Handle image edit form submission
+        document.getElementById('image-edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const prompt = document.getElementById('edit-prompt').value;
+            const referenceInputs = document.querySelectorAll('.reference-image');
+            
+            // Collect all non-empty image URLs
+            const imageUrls = Array.from(referenceInputs)
+                .map(input => input.value.trim())
+                .filter(url => url !== '');
+            
+            const imageContainer = document.getElementById('edited-image-container');
+            const loading = document.getElementById('edit-loading');
+            const errorElement = document.getElementById('edit-error');
+            
+            // Clear previous results
+            imageContainer.innerHTML = '';
+            errorElement.textContent = '';
+            loading.style.display = 'block';
+            
+            try {
+                // Build the URL with query parameters
+                const url = `/api/edit-image?prompt=${encodeURIComponent(prompt)}&image=${encodeURIComponent(imageUrls.join(','))}`;
+                
+                // Create image element
+                const img = document.createElement('img');
+                img.src = url;
+                
+                // When image loads, hide loading indicator and show image
+                img.onload = () => {
+                    loading.style.display = 'none';
+                    imageContainer.appendChild(img);
+                };
+                
+                // Handle image loading error
+                img.onerror = () => {
+                    loading.style.display = 'none';
+                    errorElement.textContent = 'Error editing image. Please try again.';
+                };
+            } catch (error) {
+                loading.style.display = 'none';
+                errorElement.textContent = 'Error editing image: ' + error.message;
+                console.error('Error editing image:', error);
             }
         });
     </script>
