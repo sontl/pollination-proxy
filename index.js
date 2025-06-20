@@ -65,6 +65,46 @@ app.get('/api/pollinations', async (req, res) => {
   }
 });
 
+// Proxy route for image editing with gptimage
+app.get('/api/edit-image', async (req, res) => {
+  try {
+    const { prompt, image } = req.query;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    if (!image) {
+      return res.status(400).json({ error: 'Image URL is required' });
+    }
+
+    // Handle multiple images - they will be comma separated
+    const imageUrls = image.split(',').map(url => url.trim());
+    
+    // Construct the Pollinations URL for image editing with all reference images
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=gptimage&image=${imageUrls.map(url => encodeURIComponent(url)).join(',')}&token=${process.env.POLLINATIONS_API_TOKEN}&referrer=singmesong.com`;
+    
+    // Forward the request to Pollinations API
+    const response = await axios({
+      method: 'get',
+      url: pollinationsUrl,
+      responseType: 'stream',
+      headers: {
+        'Referer': 'https://singmesong.com/'
+      }
+    });
+    
+    // Set the appropriate headers
+    res.set('Content-Type', response.headers['content-type']);
+    
+    // Pipe the response from Pollinations to our response
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Error proxying to image editing:', error.message);
+    res.status(500).json({ error: 'Failed to proxy request to Pollinations API' });
+  }
+});
+
 // Default route to serve the main HTML page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
