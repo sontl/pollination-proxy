@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,19 +36,22 @@ app.get('/api/pollinations', async (req, res) => {
     }
     
     // Default values
-    const modelCode = model || 'stable-diffusion';
-    const imageWidth = width || 512;
-    const imageHeight = height || 512;
+    const modelCode = model || 'flux';
+    const imageWidth = width || 1024;
+    const imageHeight = height || 1024;
     const imageSeed = seed || Math.floor(Math.random() * 1000000);
     
     // Construct the Pollinations URL with parameters
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=${modelCode}&width=${imageWidth}&height=${imageHeight}&seed=${imageSeed}&nologo=true`;
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=${modelCode}&width=${imageWidth}&height=${imageHeight}&seed=${imageSeed}&nologo=true&token=${process.env.POLLINATIONS_API_TOKEN}&referrer=singmesong.com`;
     
     // Forward the request to Pollinations API
     const response = await axios({
       method: 'get',
       url: pollinationsUrl,
-      responseType: 'stream'
+      responseType: 'stream',
+      headers: {
+        'Referer': 'https://singmesong.com/'
+      }
     });
     
     // Set the appropriate headers
